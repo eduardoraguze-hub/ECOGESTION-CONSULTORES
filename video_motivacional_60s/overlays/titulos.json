@@ -1,0 +1,79 @@
+[
+  {
+    "id": "01_cuando_el_mundo",
+    "png": "/home/user/ECOGESTION-CONSULTORES/video_motivacional_60s/overlays/01_cuando_el_mundo.png",
+    "inicio": 0.3,
+    "fin": 4.85,
+    "texto": "Cuando el mundo se siente demasiado..."
+  },
+  {
+    "id": "02_paz_interior",
+    "png": "/home/user/ECOGESTION-CONSULTORES/video_motivacional_60s/overlays/02_paz_interior.png",
+    "inicio": 5.5,
+    "fin": 14.55,
+    "texto": "...tu paz interior te llama."
+  },
+  {
+    "id": "03a_riqueza",
+    "png": "/home/user/ECOGESTION-CONSULTORES/video_motivacional_60s/overlays/03a_riqueza.png",
+    "inicio": 15.6,
+    "fin": 21.45,
+    "texto": "La verdadera riqueza no está en lo que posees,"
+  },
+  {
+    "id": "03b_libertad",
+    "png": "/home/user/ECOGESTION-CONSULTORES/video_motivacional_60s/overlays/03b_libertad.png",
+    "inicio": 21.8,
+    "fin": 28.05,
+    "texto": "sino en la libertad de tu tiempo"
+  },
+  {
+    "id": "03c_tranquilidad",
+    "png": "/home/user/ECOGESTION-CONSULTORES/video_motivacional_60s/overlays/03c_tranquilidad.png",
+    "inicio": 28.4,
+    "fin": 34.55,
+    "texto": "y la tranquilidad de tu mente."
+  },
+  {
+    "id": "04a_calma",
+    "png": "/home/user/ECOGESTION-CONSULTORES/video_motivacional_60s/overlays/04a_calma.png",
+    "inicio": 35.5,
+    "fin": 40.45,
+    "texto": "Deja que la calma de estos paisajes te recuerde"
+  },
+  {
+    "id": "04b_constancia",
+    "png": "/home/user/ECOGESTION-CONSULTORES/video_motivacional_60s/overlays/04b_constancia.png",
+    "inicio": 40.8,
+    "fin": 45.3,
+    "texto": "que la constancia vence a la prisa"
+  },
+  {
+    "id": "04c_no_rendirse",
+    "png": "/home/user/ECOGESTION-CONSULTORES/video_motivacional_60s/overlays/04c_no_rendirse.png",
+    "inicio": 45.6,
+    "fin": 49.6,
+    "texto": "y que el orgullo de no rendirse es para siempre."
+  },
+  {
+    "id": "05a_respira",
+    "png": "/home/user/ECOGESTION-CONSULTORES/video_motivacional_60s/overlays/05a_respira.png",
+    "inicio": 51.0,
+    "fin": 59.4,
+    "texto": "Respira."
+  },
+  {
+    "id": "05b_confia",
+    "png": "/home/user/ECOGESTION-CONSULTORES/video_motivacional_60s/overlays/05b_confia.png",
+    "inicio": 52.6,
+    "fin": 59.4,
+    "texto": "Confía."
+  },
+  {
+    "id": "05c_sigue",
+    "png": "/home/user/ECOGESTION-CONSULTORES/video_motivacional_60s/overlays/05c_sigue.png",
+    "inicio": 54.2,
+    "fin": 59.4,
+    "texto": "Sigue."
+  }
+]
