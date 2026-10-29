@@ -68,7 +68,16 @@ def render(lines, size, ycenter):
     shadow2 = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     shadow2.putalpha(alpha.point(lambda a: int(a * 0.6)))
     shadow2 = shadow2.filter(ImageFilter.GaussianBlur(4))
-    out = Image.alpha_composite(shadow, shadow2)
+    # velo oscuro difuso detrás del bloque de texto (contraste sobre cielos y arena claros)
+    bbox = alpha.getbbox()
+    scrim = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    if bbox:
+        sd = ImageDraw.Draw(scrim)
+        x0, y0, x1, y1 = bbox
+        sd.ellipse((x0 - 170, y0 - 150, x1 + 170, y1 + 150), fill=(0, 0, 0, 105))
+        scrim = scrim.filter(ImageFilter.GaussianBlur(90))
+    out = Image.alpha_composite(scrim, shadow)
+    out = Image.alpha_composite(out, shadow2)
     out = Image.alpha_composite(out, text_layer)
     return out
 

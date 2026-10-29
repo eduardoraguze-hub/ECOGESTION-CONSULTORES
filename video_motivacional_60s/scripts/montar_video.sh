@@ -12,7 +12,8 @@ T=0.5   # duración de cada transición (disolvencia cinematográfica)
 [ -f escenas/S4a_lago_atardecer.mp4 ] || ffmpeg -v error -y -i clips/S4a_lago_atardecer.mp4  -vf "$FX,tpad=stop_mode=clone:stop_duration=0.5" -t 8.5  -an -c:v libx264 -crf 14 -preset slow escenas/S4a_lago_atardecer.mp4
 
 # 2) Ensamble con disolvencias + etalonaje cinematográfico (contraste suave, viñeta, grano)
-ffmpeg -v error -y \
+#    (borra escenas/BASE_sin_texto.mp4 para forzar un nuevo ensamble)
+[ -f escenas/BASE_sin_texto.mp4 ] || ffmpeg -v error -y \
   -i escenas/S1_montanas_amanecer.mp4 -i escenas/S2_playa.mp4 -i escenas/S3a_bosque_rayos_sol.mp4 \
   -i escenas/S3b_sendero_bosque.mp4 -i escenas/S4a_lago_atardecer.mp4 -i escenas/S4b_camino_rural.mp4 \
   -i escenas/S5_cielo_estrellado.mp4 \
