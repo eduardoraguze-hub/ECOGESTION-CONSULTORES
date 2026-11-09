@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ruta ESG Animada</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f4f6f2;--fg:#1f2a24;--muted:#5d6b62;--card:#ffffff;--line:#d8dfd6;--accent:#1B7C3B}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#121714;--fg:#e8eee9;--muted:#9fb0a5;--card:#1b221e;--line:#2c3630;--accent:#5fc483}}
+:root[data-theme="dark"]{--bg:#121714;--fg:#e8eee9;--muted:#9fb0a5;--card:#1b221e;--line:#2c3630;--accent:#5fc483}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--fg);font-family:Inter,'Segoe UI',system-ui,sans-serif;padding:16px;min-height:100vh}
+.wrap{max-width:1280px;margin:0 auto}
+h1{font-size:1.1rem;font-weight:800;margin-bottom:10px}
+#stage{width:100%;aspect-ratio:16/9;border-radius:12px;overflow:hidden;box-shadow:0 6px 28px rgba(0,0,0,.18);background:#f3f6f1}
+#stage svg{width:100%;height:100%;display:block}
+#controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px}
+button{font:inherit;font-size:.9rem;font-weight:600;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:8px;padding:8px 14px;cursor:pointer}
+button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+input[type=range]{flex:1;min-width:160px;accent-color:var(--accent)}
+#time{font-variant-numeric:tabular-nums;color:var(--muted);font-size:.85rem;min-width:92px}
+#scenes{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+#scenes button{font-size:.78rem;padding:5px 10px}
+#scenes button.on{border-color:var(--accent);color:var(--accent)}
+body.render{padding:0;background:#f3f6f1}
+body.render .wrap{max-width:none}
+body.render h1,body.render #controls,body.render #scenes{display:none}
+body.render #stage{width:1920px;height:1080px;border-radius:0;box-shadow:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>EcoGestión · Ruta ESG — animación con subtítulos sincronizados</h1>
+  <div id="stage"><svg id="svg" viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg"></svg></div>
+  <div id="controls">
+    <button id="play" class="primary">▶ Reproducir</button>
+    <input id="seek" type="range" min="0" max="1" step="0.01" value="0" aria-label="Línea de tiempo">
+    <span id="time">0.0 s</span>
+    <button id="srt">Descargar SRT</button>
+  </div>
+  <div id="scenes"></div>
+</div>
+<script>
+/* ============ 1. GUION (cada bloque = una escena) ============ */
+const SCRIPT = [
+  {name:'Gancho',     text:'Hoy, cada cliente pregunta lo mismo: ¿qué tan sostenible es tu empresa?'},
+  {name:'Problema',   text:'Responder sin datos es como construir sobre arena: la primera auditoría lo derrumba.'},
+  {name:'Diagnóstico',text:'Por eso medimos primero: dónde estás, dónde exige el estándar, y qué tan grande es la brecha.'},
+  {name:'Cimientos',  text:'Luego ponemos cimientos firmes: tres pilares, ambiental, social y gobernanza, que sostienen todo lo demás.'},
+  {name:'Normas',     text:'Sobre esos pilares, cada norma es un piso más: ISO 45001, SMETA, EcoVadis, ESR… hasta llegar a B Corp.'},
+  {name:'Resultados', text:'El resultado se mide: cuarenta por ciento menos accidentes, cero no conformidades mayores, y clientes que vuelven a confiar.'},
+  {name:'Cierre',     text:'EcoGestión: transformamos organizaciones hacia modelos sostenibles. Agenda hoy tu diagnóstico.'}
+];
+
+/* ============ 2. TIEMPOS POR PALABRA (locución ~2.6 palabras/s) ============ */
+const PAUSE = {',':0.18,';':0.25,':':0.32,'.':0.42,'?':0.42,'…':0.38};
+const norm = w => w.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]/g,'');
+const wordDur = w => 0.17 + 0.052 * Math.min(norm(w).length, 10);
+let T = 0.4;
+const BLOCKS = SCRIPT.map((s, i) => {
+  const start = T;
+  const words = s.text.split(/\s+/).map(w => {
+    const o = {w, t:T, e:T + wordDur(w)};
+    T = o.e + (PAUSE[w.slice(-1)] || 0.04);
+    return o;
+  });
+  const end = T + (i === SCRIPT.length - 1 ? 3.0 : 1.5); // imagen final sostenida
+  T = end;
+  return {...s, start, end, words};
+});
+const DUR = T;
+function A(b, key){ // tiempo exacto de una palabra clave
+  const ws = BLOCKS[b].words;
+  const o = ws.find(o => norm(o.w) === key) || ws.find(o => norm(o.w).startsWith(key));
+  if(!o) throw new Error('Palabra ancla no encontrada: ' + key);
+  return o.t;
+}
+const S = b => BLOCKS[b].start, END = b => BLOCKS[b].end;
+
+/* Subtítulos: frases de máx. 44 caracteres */
+BLOCKS.forEach(b => {
+  b.chunks = []; let cur = [], len = 0;
+  b.words.forEach((o, i) => {
+    if(cur.length && len + o.w.length + 1 > 44){ b.chunks.push(cur); cur = []; len = 0; }
+    cur.push(i); len += o.w.length + 1;
+    if(/[.:?…]$/.test(o.w) && len > 22 && i < b.words.length - 1){ b.chunks.push(cur); cur = []; len = 0; }
+  });
+  if(cur.length) b.chunks.push(cur);
+});
+
+/* ============ 3. UTILIDADES ============ */
+const NS = 'http://www.w3.org/2000/svg';
+function el(tag, attrs = {}, parent, text){
+  const e = document.createElementNS(NS, tag);
+  for(const k in attrs) e.setAttribute(k, attrs[k]);
+  if(text !== undefined) e.textContent = text;
+  if(parent) parent.appendChild(e);
+  return e;
+}
+const set = (e, a) => { for(const k in a) e.setAttribute(k, a[k]); };
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const lerp = (a, b, x) => a + (b - a) * x;
+const E = {
+  io: x => x < .5 ? 4*x*x*x : 1 - Math.pow(-2*x + 2, 3) / 2,
+  out: x => 1 - Math.pow(1 - x, 3),
+  back: x => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3*Math.pow(x-1,3) + c1*Math.pow(x-1,2); },
+  bounce: x => { const n = 7.5625, d = 2.75;
+    if(x < 1/d) return n*x*x; if(x < 2/d) return n*(x -= 1.5/d)*x + .75;
+    if(x < 2.5/d) return n*(x -= 2.25/d)*x + .9375; return n*(x -= 2.625/d)*x + .984375; }
+};
+const P = (t, t0, d = .6, e = E.io) => e(clamp((t - t0) / d));
+function K(t, keys){ let v = keys[0][1];
+  for(let i = 1; i < keys.length; i++){ const [t0, val, d = .7, e = E.io] = keys[i]; if(t < t0) break; v = lerp(v, val, P(t, t0, d, e)); }
+  return v; }
+function mix(c1, c2, x){ const a = parseInt(c1.slice(1),16), b = parseInt(c2.slice(1),16);
+  const r = Math.round(lerp(a>>16, b>>16, x)), g = Math.round(lerp((a>>8)&255, (b>>8)&255, x)), bl = Math.round(lerp(a&255, b&255, x));
+  return '#' + ((1<<24) + (r<<16) + (g<<8) + bl).toString(16).slice(1); }
+
+/* ============ 4. ESCENARIO (elementos persistentes) ============ */
+const C = {verde:'#1B7C3B', verdeCl:'#7dd4a0', azul:'#1a4fa0', gris:'#7b8794', tinta:'#1f2a24', rojo:'#c8432f', naranja:'#d9822b', arena:'#e3c78f'};
+const GROUND = 860;
+const svg = document.getElementById('svg');
+const defs = el('defs', {}, svg);
+const f = el('filter', {id:'sh', x:'-20%', y:'-20%', width:'140%', height:'150%'}, defs);
+el('feDropShadow', {dx:0, dy:8, stdDeviation:10, 'flood-color':'#000', 'flood-opacity':.16}, f);
+const glow = el('filter', {id:'glow', x:'-30%', y:'-30%', width:'160%', height:'160%'}, defs);
+el('feGaussianBlur', {stdDeviation:9}, glow);
+
+el('rect', {width:1920, height:1080, fill:'#f3f6f1'}, svg);
+const cam = el('g', {}, svg);
+// paisaje
+el('path', {d:'M0,860 C300,760 520,790 760,820 C1020,850 1260,740 1560,780 C1720,800 1840,790 1920,770 L1920,860Z', fill:'#e3ecdf'}, cam);
+el('rect', {x:-400, y:GROUND, width:2720, height:400, fill:'#e9eee4'}, cam);
+el('line', {x1:-400, y1:GROUND, x2:2320, y2:GROUND, stroke:'#c9d3c5', 'stroke-width':4}, cam);
+
+// ARENA (analogía literal)
+const sand = el('g', {}, cam);
+el('path', {d:'M-340,4 Q-260,-34 0,-38 Q260,-34 340,4 Z', fill:C.arena}, sand);
+for(let i = 0; i < 46; i++){ const x = -290 + (i*137 % 580), y = -26 + (i*53 % 26) * (1 - Math.abs(x)/420); el('circle', {cx:x, cy:y, r:2.4 + (i%3), fill:'#c9a865'}, sand); }
+
+// EDIFICIO = la empresa (se conserva y transforma en todas las escenas)
+const bld = el('g', {}, cam);
+const crown = el('g', {}, bld);
+[[0,-500,210],[-180,-400,160],[180,-400,160],[-95,-600,140],[105,-600,140],[0,-690,120]].forEach(([x,y,r]) => el('circle', {cx:x, cy:y, r, fill:'#3a9d62'}, crown));
+const slab = el('rect', {x:-215, y:-26, width:430, height:26, rx:5, fill:'#8e948b'}, bld);
+const pillars = [-108, 0, 108].map((x, i) => {
+  const g = el('g', {}, bld);
+  const r = el('rect', {x:x-33, width:66, rx:6, fill:[C.verde, C.azul, '#3d4a43'][i]}, g);
+  const ic = el('g', {}, g);
+  if(i === 0){ el('path', {d:'M0,-20 C16,-20 20,-4 0,20 C-20,-4 -16,-20 0,-20Z', fill:'#fff'}, ic); el('line', {x1:0, y1:-12, x2:0, y2:16, stroke:C.verde, 'stroke-width':3}, ic); }
+  if(i === 1){ el('circle', {cx:-9, cy:-10, r:7, fill:'#fff'}, ic); el('circle', {cx:10, cy:-10, r:7, fill:'#fff'}, ic);
+    el('path', {d:'M-21,14 Q-21,0 -9,0 Q3,0 3,14Z M-2,14 Q-2,0 10,0 Q22,0 22,14Z', fill:'#fff'}, ic); }
+  if(i === 2){ el('path', {d:'M0,-20 L0,16 M-20,-12 L20,-12 M-12,16 L12,16', stroke:'#fff', 'stroke-width':3.5, fill:'none'}, ic);
+    el('path', {d:'M-28,4 L-20,-12 L-12,4Z M12,4 L20,-12 L28,4Z', fill:'#fff'}, ic); }
+  return {g, r, ic, x};
+});
+const fac = el('g', {}, bld);
+const smoke = el('g', {}, fac);
+const smokeP = [0,1,2,3].map(i => el('circle', {r:14 + i*5, fill:'#b9c0bb'}, smoke));
+const chimney = el('rect', {x:136, y:-232, width:26, height:84, fill:'#6c7680'}, fac);
+const body = el('rect', {x:-165, y:-152, width:330, height:152, rx:6, fill:C.gris}, fac);
+const wins = [];
+for(let r = 0; r < 2; r++) for(let c = 0; c < 5; c++){ if(r === 1 && c === 2) continue;
+  wins.push(el('rect', {x:-140 + c*58, y:-130 + r*58, width:40, height:34, rx:4, fill:'#dfe7ee'}, fac)); }
+el('rect', {x:-22, y:-62, width:44, height:62, rx:3, fill:'#4b5560'}, fac);
+const cracks = el('path', {d:'M-60,-152 L-48,-118 L-66,-90 L-50,-58 M70,-152 L80,-120 L64,-96 L84,-70 L76,-40', stroke:C.tinta, 'stroke-width':5, fill:'none', 'stroke-linejoin':'round'}, fac);
+// pisos = normas
+const FLOOR_H = 72, FW = 268;
+const floorDefs = [
+  {key:'45001', col:'#2f6db5', icon:'helmet'}, {key:'smeta', col:'#1a4fa0', icon:'people'},
+  {key:'ecovadis', col:'#23874a', icon:'medal'}, {key:'esr', col:'#1B7C3B', icon:'heart'}];
+const floors = floorDefs.map((d, i) => {
+  const g = el('g', {}, fac);
+  const hl = el('rect', {x:-FW/2-10, y:-FLOOR_H/2-10, width:FW+20, height:FLOOR_H+4, rx:14, fill:C.verdeCl, filter:'url(#glow)'}, g);
+  el('rect', {x:-FW/2, y:-FLOOR_H/2, width:FW, height:FLOOR_H-6, rx:6, fill:d.col}, g);
+  [-104,-68,68,104].forEach(x => el('rect', {x:x-13, y:-20, width:26, height:28, rx:3, fill:'#e6eef7', opacity:.9}, g));
+  const ic = el('g', {transform:'translate(0,-3)'}, g);
+  if(d.icon === 'helmet'){ el('path', {d:'M-24,8 A24,22 0 0 1 24,8 Z', fill:'#fff'}, ic); el('rect', {x:-30, y:8, width:60, height:7, rx:3, fill:'#fff'}, ic); el('rect', {x:-3, y:-14, width:6, height:22, fill:d.col}, ic); }
+  if(d.icon === 'people'){ [-14,14].forEach(x => { el('circle', {cx:x, cy:-12, r:8, fill:'#fff'}, ic); el('path', {d:`M${x-13},16 Q${x-13},-1 ${x},-1 Q${x+13},-1 ${x+13},16Z`, fill:'#fff'}, ic); }); }
+  if(d.icon === 'medal'){ el('path', {d:'M-12,4 L-18,22 L-6,17 L0,26 L4,6Z M12,4 L18,22 L6,17 L0,26 L-4,6Z', fill:'#cfe8d8'}, ic); el('circle', {cx:0, cy:-6, r:16, fill:'#fff'}, ic);
+    el('path', {d:'M0,-16 C9,-16 10,-6 0,4 C-10,-6 -9,-16 0,-16Z', fill:d.col}, ic); }
+  if(d.icon === 'heart'){ el('path', {d:'M0,18 C-30,-2 -20,-26 0,-12 C20,-26 30,-2 0,18Z', fill:'#fff'}, ic); }
+  return {g, hl, d, y:-152 - FLOOR_H/2 - i*FLOOR_H};
+});
+const TOP = -152 - 4*FLOOR_H; // azotea
+const flag = el('g', {}, fac);
+el('rect', {x:-4, y:-120, width:8, height:120, fill:'#4b5560'}, flag);
+el('circle', {cx:46, cy:-92, r:40, fill:'#fff', stroke:C.tinta, 'stroke-width':5}, flag);
+const flagB = el('text', {x:46, y:-77, 'text-anchor':'middle', 'font-size':46, 'font-weight':800, fill:C.tinta, 'font-family':'Inter,sans-serif'}, flag, 'B');
+const flagLeaf = el('path', {d:'M46,-118 C70,-118 74,-92 46,-64 C18,-92 22,-118 46,-118Z', fill:C.verde}, flag);
+
+// CLIENTES (vuelven al final, ahora confiando)
+const clients = [[300, C.azul], [1560, '#8a5a9e'], [1700, C.naranja]].map(([x, col], i) => {
+  const g = el('g', {}, cam);
+  const inner = el('g', {}, g);
+  el('circle', {cx:0, cy:-112, r:21, fill:col}, inner);
+  el('path', {d:'M-34,0 L-34,-52 Q-34,-84 0,-84 Q34,-84 34,-52 L34,0Z', fill:col}, inner);
+  const bub = el('g', {}, inner);
+  el('path', {d:'M-36,-214 h72 a14,14 0 0 1 14,14 v34 a14,14 0 0 1 -14,14 h-26 l-12,14 l-4,-14 h-30 a14,14 0 0 1 -14,-14 v-34 a14,14 0 0 1 14,-14Z', fill:'#fff', filter:'url(#sh)'}, bub);
+  const q = el('text', {x:0, y:-164, 'text-anchor':'middle', 'font-size':46, 'font-weight':800, fill:col, 'font-family':'Inter,sans-serif'}, bub, '?');
+  const ok = el('path', {d:'M-14,-184 L-3,-172 L16,-196', stroke:C.verde, 'stroke-width':8, fill:'none', 'stroke-linecap':'round', 'stroke-linejoin':'round'}, bub);
+  return {g, inner, bub, q, ok, x};
+});
+const bigQ = el('text', {x:960, y:610, 'text-anchor':'middle', 'font-size':190, 'font-weight':800, fill:C.azul, 'font-family':'Inter,sans-serif'}, cam, '?');
+
+// OLA = auditoría
+const wave = el('g', {}, cam);
+el('path', {d:'M0,0 L0,-150 Q40,-290 190,-250 Q110,-225 130,-160 Q190,-100 330,-135 Q520,-170 760,-130 L760,0Z', fill:'#2e6fc0', opacity:.92}, wave);
+el('path', {d:'M40,-200 Q90,-260 180,-246', stroke:'#cfe0f5', 'stroke-width':8, fill:'none', 'stroke-linecap':'round'}, wave);
+el('text', {x:300, y:-60, 'font-size':54, 'font-weight':800, fill:'#fff', 'font-family':'Inter,sans-serif'}, wave, 'Auditoría');
+
+// REGLA = diagnóstico con escala real (5.5 px por punto)
+const KPX = 5.5;
+const ruler = el('g', {}, cam);
+el('rect', {x:-32, y:-100*KPX, width:64, height:100*KPX, rx:8, fill:'#e2e8df', stroke:'#c6cfc3', 'stroke-width':2}, ruler);
+for(let v = 0; v <= 100; v += 10) el('line', {x1:-48, x2:-32, y1:-v*KPX, y2:-v*KPX, stroke:'#a9b4a6', 'stroke-width':v % 50 ? 2 : 4}, ruler);
+const bar = el('rect', {x:-32, width:64, rx:8, fill:C.verde}, ruler);
+const line80 = el('line', {x1:-70, x2:70, y1:-80*KPX, y2:-80*KPX, 'stroke-width':6, 'stroke-dasharray':'14 10'}, ruler);
+const lab42 = el('text', {x:-62, 'text-anchor':'end', 'font-size':58, 'font-weight':800, fill:C.verde, 'font-family':'Inter,sans-serif'}, ruler, '42');
+const lab80 = el('text', {x:-86, y:-80*KPX + 20, 'text-anchor':'end', 'font-size':58, 'font-weight':800, fill:C.tinta, 'font-family':'Inter,sans-serif'}, ruler, '80');
+const brk = el('path', {d:`M50,${-42*KPX} h22 V${-80*KPX} h-22`, stroke:C.rojo, 'stroke-width':8, fill:'none', 'stroke-linejoin':'round'}, ruler);
+const lab38 = el('text', {x:92, y:-61*KPX + 22, 'font-size':72, 'font-weight':800, fill:C.rojo, 'font-family':'Inter,sans-serif'}, ruler, '38');
+const tick = el('path', {d:'M92,-452 l16,16 l30,-34', stroke:C.verde, 'stroke-width':12, fill:'none', 'stroke-linecap':'round', 'stroke-linejoin':'round'}, ruler);
+
+// PANEL de resultados (barras a la misma escala: 100% = 520 px)
+const panel = el('g', {}, cam);
+const BX = 990, BW = 520;
+const iconH = el('g', {transform:'translate(930,452)'}, panel);
+el('path', {d:'M-30,10 A30,28 0 0 1 30,10 Z', fill:C.naranja}, iconH); el('rect', {x:-38, y:10, width:76, height:9, rx:4, fill:C.naranja}, iconH);
+const iconW = el('g', {transform:'translate(930,612)'}, panel);
+el('path', {d:'M0,-32 L34,26 L-34,26Z', fill:C.rojo}, iconW); el('rect', {x:-4, y:-12, width:8, height:22, fill:'#fff'}, iconW); el('circle', {cx:0, cy:17, r:4.5, fill:'#fff'}, iconW);
+el('rect', {x:BX, y:420, width:BW, height:64, rx:10, fill:'#dfe5dc'}, panel);
+const barA = el('rect', {x:BX, y:420, height:64, rx:10, fill:C.naranja}, panel);
+const labA = el('text', {y:472, 'font-size':58, 'font-weight':800, fill:C.verde, 'font-family':'Inter,sans-serif'}, panel, '−40%');
+el('rect', {x:BX, y:580, width:BW*0.7, height:64, rx:10, fill:'#dfe5dc'}, panel);
+const barN = el('rect', {x:BX, y:580, height:64, rx:10, fill:C.rojo}, panel);
+const labN = el('text', {y:634, 'font-size':64, 'font-weight':800, fill:C.verde, 'font-family':'Inter,sans-serif'}, panel, '0');
+
+// OVERLAY: titulares (≤4 palabras), marca y subtítulos
+const overlay = el('g', {}, svg);
+const HEAD = [
+  {b:0, k:'que', txt:'¿Qué tan sostenible?'}, {b:1, k:'arena', txt:'Sobre arena'},
+  {b:2, k:'brecha', txt:'Brecha'}, {b:3, k:'pilares', txt:'Tres pilares'},
+  {b:4, k:'piso', txt:'Piso por piso'}, {b:5, k:'resultado', txt:'Resultados'}
+].map(h => { const g = el('g', {}, overlay);
+  const tx = el('text', {x:120, y:170, 'font-size':76, 'font-weight':800, fill:C.tinta, 'font-family':'Inter,sans-serif'}, g, h.txt);
+  const ul = el('rect', {x:122, y:196, height:10, rx:5, fill:C.verde}, g);
+  return {...h, g, tx, ul, t0:A(h.b, h.k), t1:END(h.b) - .35}; });
+const brand = el('g', {}, overlay);
+el('path', {d:'M1060,402 C1100,402 1108,446 1060,490 C1012,446 1020,402 1060,402Z', fill:C.verde}, brand);
+el('text', {x:1110, y:478, 'font-size':104, 'font-weight':800, fill:C.verde, 'font-family':'Inter,sans-serif'}, brand, 'EcoGestión');
+const cta = el('g', {}, overlay);
+el('rect', {x:1040, y:540, width:700, height:116, rx:58, fill:C.azul, filter:'url(#sh)'}, cta);
+el('text', {x:1390, y:616, 'text-anchor':'middle', 'font-size':54, 'font-weight':800, fill:'#fff', 'font-family':'Inter,sans-serif'}, cta, 'Agenda tu diagnóstico');
+const subG = el('g', {}, overlay);
+const subBg = el('rect', {y:944, height:92, rx:20, fill:'#ffffff', opacity:.94, filter:'url(#sh)'}, subG);
+const subT = el('text', {x:960, y:1004, 'text-anchor':'middle', 'font-size':46, 'font-weight':600, 'font-family':'Inter,sans-serif'}, subG);
+let subKey = '', spans = [];
+
+/* ============ 5. RENDER(t): cada acción anclada a su palabra ============ */
+const a = {
+  hoy:S(0), cliente:A(0,'cliente'), pregunta:A(0,'pregunta'), sostenible:A(0,'sostenible'), empresa:A(0,'empresa'),
+  arena:A(1,'arena'), auditoria:A(1,'auditoria'), derrumba:A(1,'derrumba'),
+  medimos:A(2,'medimos'), estas:A(2,'estas'), estandar:A(2,'estandar'), brecha:A(2,'brecha'),
+  luego:A(3,'luego'), cimientos:A(3,'cimientos'), pilares:A(3,'pilares'), sostienen:A(3,'sostienen'),
+  pil:[A(3,'ambiental'), A(3,'social'), A(3,'gobernanza')],
+  fl:floorDefs.map(d => A(4, d.key)), corp:A(4,'corp'),
+  resultado:A(5,'resultado'), mide:A(5,'mide'), cuarenta:A(5,'cuarenta'), menos:A(5,'menos'), cero:A(5,'cero'), clientes:A(5,'clientes'), confiar:A(5,'confiar'),
+  eco:S(6), transformamos:A(6,'transformamos'), sostenibles:A(6,'sostenibles'), agenda:A(6,'agenda')
+};
+
+function render(t){
+  // Cámara: acercamiento a la brecha
+  const cs = K(t, [[0,1],[a.brecha,1.15,.9],[a.luego,1,.9]]);
+  const cx = K(t, [[0,960],[a.brecha,1180,.9],[a.luego,960,.9]]);
+  const cy = K(t, [[0,540],[a.brecha,560,.9],[a.luego,540,.9]]);
+  set(cam, {transform:`translate(960 540) scale(${cs}) translate(${-cx} ${-cy})`});
+
+  // Edificio
+  const pop = P(t, a.hoy, .8, E.back);
+  const pulse = 1 + .07 * Math.sin(Math.PI * P(t, a.empresa, .5, x => x));
+  const bx = K(t, [[0,960],[a.medimos,560,.9],[a.luego,960,.9],[a.resultado,520,.9],[a.eco,640,1]]);
+  const bs = K(t, [[0,1],[a.medimos,.85,.9],[a.luego,1,.9],[a.resultado,.78,.9],[a.eco,.84,1]]);
+  set(bld, {transform:`translate(${bx} ${GROUND}) scale(${bs * pop * pulse})`, opacity:clamp(pop * 2)});
+  const rot = K(t, [[0,0],[a.derrumba,-9,.7,E.out],[a.medimos,0,.6]]);
+  const sink = K(t, [[0,0],[a.arena,8,.5],[a.derrumba,34,.7,E.out],[a.medimos,0,.6]]);
+  const settle = P(t, a.sostienen, .6);
+  const hover = t > a.pilares && t < a.sostienen + .6 ? Math.sin((t - a.pilares) * 5) * 6 * (1 - settle) : 0;
+  const lift = 176 * P(t, a.pilares, 1.0) + hover;
+  set(fac, {transform:`translate(0 ${sink - lift}) rotate(${rot})`});
+  set(cracks, {opacity:P(t, a.derrumba, .3) * (1 - P(t, a.medimos, .5))});
+  const tint = P(t, a.transformamos, 1.2);
+  set(body, {fill:mix(C.gris, '#2f8f55', tint)}); set(chimney, {fill:mix('#6c7680', '#24753f', tint)});
+  wins.forEach(w => set(w, {fill:mix('#dfe7ee', '#d6f2df', tint)}));
+  const smokeOn = 1 - P(t, a.medimos, .6);
+  smokeP.forEach((c, i) => { const ph = ((t * .35 + i * .25) % 1);
+    set(c, {cx:149 + ph * 40, cy:-250 - ph * 140, opacity:(1 - ph) * .8 * smokeOn * pop}); });
+  // arena
+  const sv = P(t, a.arena, .5, E.out) * (1 - P(t, a.medimos, .6));
+  set(sand, {transform:`translate(960 ${GROUND}) scale(1 ${sv})`, opacity:sv});
+  // cimientos y pilares
+  const sl = P(t, a.cimientos, .5, E.out);
+  set(slab, {transform:`scale(${sl} 1)`, opacity:sl});
+  pillars.forEach((p, i) => { const h = 150 * P(t, a.pil[i], .55, E.out);
+    set(p.r, {y:-26 - h, height:h}); set(p.ic, {transform:`translate(${p.x} ${-26 - h/2})`, opacity:P(t, a.pil[i] + .25, .3)}); });
+  // pisos (normas) caen sobre el edificio
+  floors.forEach((fl, i) => { const p = P(t, a.fl[i], .75, E.bounce);
+    set(fl.g, {transform:`translate(0 ${fl.y - (1 - p) * 460})`, opacity:clamp(p * 3)});
+    set(fl.hl, {opacity:P(t, a.fl[i] + .2, .25) * (1 - P(t, a.fl[i] + 1.1, .6)) * .9}); });
+  const fp = P(t, a.corp, .7, E.back);
+  set(flag, {transform:`translate(0 ${TOP}) scale(${fp})`, opacity:clamp(fp * 2)});
+  const morph = P(t, a.eco, .5);
+  set(flagB, {opacity:1 - morph}); set(flagLeaf, {opacity:morph});
+  const cr = P(t, a.transformamos, 1.3, E.back);
+  set(crown, {transform:`translate(0 -150) scale(${Math.max(cr, .001)}) translate(0 150)`, opacity:clamp(cr * 2)});
+
+  // Clientes
+  clients.forEach((c, i) => {
+    const s1 = P(t, a.cliente + i * .15, .5, E.back) * (1 - P(t, a.arena, .5));
+    const s2 = P(t, a.clientes + i * .12, .5, E.back) * (1 - P(t, a.eco, .5));
+    const s = Math.max(s1, s2);
+    set(c.g, {transform:`translate(${c.x} ${GROUND})`, opacity:clamp(s * 1.5)});
+    set(c.inner, {transform:`scale(${Math.max(s, .001)})`});
+    const b1 = P(t, a.pregunta + i * .12, .4, E.back), b2 = P(t, a.confiar + i * .12, .4, E.back);
+    const phase2 = t >= S(5);
+    const bv = phase2 ? b2 : b1;
+    set(c.bub, {opacity:clamp(bv), transform:`translate(0 -150) scale(${Math.max(bv, .001)}) translate(0 150)`});
+    set(c.q, {opacity:phase2 ? 0 : 1}); set(c.ok, {opacity:phase2 ? 1 : 0});
+  });
+  const q = P(t, a.sostenible, .5, E.back) * (1 - P(t, S(1), .4));
+  set(bigQ, {opacity:clamp(q), transform:`translate(960 560) scale(${Math.max(q, .001) * (1 + .05 * Math.sin(t * 6))}) translate(-960 -560)`});
+
+  // Ola de auditoría
+  const wx = K(t, [[0,2050],[a.auditoria,1150,.9,E.out],[a.derrumba + .9,2100,1.2]]);
+  set(wave, {transform:`translate(${wx} ${GROUND})`});
+
+  // Regla: grande en el diagnóstico, luego medidor que sigue subiendo
+  const rIn = P(t, a.medimos + .2, .6, E.out) * (1 - P(t, a.eco, .6));
+  const toMini = P(t, a.luego, .9);
+  const rx = lerp(1250, 1800, toMini), ry = lerp(840, 640, toMini), rs = lerp(1, .42, toMini);
+  set(ruler, {transform:`translate(${rx} ${ry}) scale(${rs * Math.max(rIn, .001)})`, opacity:clamp(rIn)});
+  const val = K(t, [[0,0],[a.estas,42,.9,E.out],[a.sostienen,60,.8],[a.fl[0],65,.6],[a.fl[1],70,.6],[a.fl[2],75,.6],[a.fl[3],79,.6],[a.corp,86,.7,E.out]]);
+  set(bar, {y:-val * KPX, height:val * KPX});
+  const dim = P(t, a.brecha, .5) * (1 - P(t, a.luego, .5));
+  const labels = 1 - toMini;
+  set(lab42, {y:-42 * KPX + 20, opacity:P(t, a.estas + .4, .4) * labels * (1 - .55 * dim)});
+  set(bar, {opacity:1 - .45 * dim});
+  const l80 = P(t, a.estandar, .5);
+  set(line80, {opacity:l80, stroke:val >= 80 ? C.verde : C.tinta});
+  set(lab80, {opacity:l80 * labels * (1 - .55 * dim)});
+  set(brk, {opacity:P(t, a.brecha, .4) * labels}); set(lab38, {opacity:P(t, a.brecha + .15, .4, E.back) * labels});
+  set(tick, {opacity:P(t, a.corp + .4, .4)});
+
+  // Panel de resultados
+  const pv = P(t, a.mide, .6) * (1 - P(t, a.eco, .5));
+  set(panel, {opacity:pv});
+  const wA = K(t, [[0,BW],[a.menos,BW * .6,1,E.out]]);
+  set(barA, {width:wA}); set(labA, {x:BX + wA + 26, opacity:P(t, a.cuarenta, .4)});
+  const wN = K(t, [[0,BW * .7],[a.cero,0,.9,E.out]]);
+  set(barN, {width:Math.max(wN, .01)}); set(labN, {x:BX + wN + 26, opacity:P(t, a.cero + .3, .4)});
+  const dimA = P(t, a.cero, .4) * (1 - P(t, a.clientes, .4));
+  set(barA, {opacity:1 - .5 * dimA}); set(iconH, {opacity:1 - .5 * dimA});
+
+  // Titulares
+  HEAD.forEach(h => { const v = P(t, h.t0, .45, E.out) * (1 - P(t, h.t1, .35));
+    set(h.g, {opacity:v, transform:`translate(0 ${(1 - P(t, h.t0, .45, E.out)) * 30})`});
+    let w = 0; try { w = h.tx.getComputedTextLength(); } catch(e){}
+    set(h.ul, {width:w * P(t, h.t0 + .15, .5)}); });
+  const bv = P(t, a.eco, .6, E.out);
+  set(brand, {opacity:bv, transform:`translate(${(1 - bv) * 40} 0)`});
+  const cv = P(t, a.agenda, .6, E.back);
+  set(cta, {opacity:clamp(cv * 1.5), transform:`translate(1390 598) scale(${Math.max(cv, .001)}) translate(-1390 -598)`});
+
+  renderSubs(t);
+}
+
+function renderSubs(t){
+  const bi = BLOCKS.findIndex(b => t >= b.start && t < b.end);
+  if(bi < 0){ set(subG, {opacity:0}); return; }
+  const b = BLOCKS[bi];
+  let wi = -1; b.words.forEach((o, i) => { if(t >= o.t) wi = i; });
+  const ci = Math.max(0, b.chunks.findIndex(c => c.includes(Math.max(wi, 0))));
+  const key = bi + ':' + ci;
+  if(key !== subKey){ subKey = key; subT.textContent = ''; spans = [];
+    b.chunks[ci].forEach((idx, j) => { const s = el('tspan', {}, subT, (j ? ' ' : '') + b.words[idx].w); spans.push({s, idx}); });
+    let w = 900; try { w = subT.getComputedTextLength(); } catch(e){}
+    set(subBg, {x:960 - w/2 - 36, width:w + 72}); }
+  spans.forEach(({s, idx}) => {
+    const cur = idx === wi && t < b.words[idx].e + .15;
+    set(s, {fill:cur ? C.verde : idx <= wi ? C.tinta : '#9aa69c', 'font-weight':cur ? 800 : 600});
+  });
+  set(subG, {opacity:P(t, b.start - .05, .25) * (1 - P(t, b.end - .3, .25))});
+}
+
+/* ============ 6. SRT y controles ============ */
+const fmt = s => { const ms = Math.round(s * 1000), h = Math.floor(ms / 3600000), m = Math.floor(ms / 60000) % 60, sec = Math.floor(ms / 1000) % 60;
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')},${String(ms % 1000).padStart(3,'0')}`; };
+function buildSRT(){ let n = 0, out = [];
+  BLOCKS.forEach(b => b.chunks.forEach((c, ci) => { const st = b.words[c[0]].t;
+    const en = ci < b.chunks.length - 1 ? b.words[b.chunks[ci + 1][0]].t - .02 : b.end - .3;
+    out.push(`${++n}\n${fmt(st)} --> ${fmt(en)}\n${c.map(i => b.words[i].w).join(' ')}\n`); }));
+  return out.join('\n'); }
+window.__seek = t => render(t);
+window.__DUR = DUR;
+window.__SRT = buildSRT;
+window.__BLOCKS = BLOCKS.map(b => ({name:b.name, start:+b.start.toFixed(2), end:+b.end.toFixed(2), words:b.words.map(o => [o.w, +o.t.toFixed(2)])}));
+
+const params = new URLSearchParams(location.search);
+if(params.has('render')) document.body.classList.add('render');
+let t = +(params.get('t') || 0), playing = false, last = 0;
+const seek = document.getElementById('seek'), timeL = document.getElementById('time'), playB = document.getElementById('play');
+seek.max = DUR.toFixed(2);
+const sc = document.getElementById('scenes');
+const sceneBtns = BLOCKS.map((b, i) => { const btn = document.createElement('button'); btn.textContent = `${i + 1} · ${b.name}`;
+  btn.onclick = () => { t = b.start; draw(); }; sc.appendChild(btn); return btn; });
+function draw(){ render(t); seek.value = t; timeL.textContent = `${t.toFixed(1)} / ${DUR.toFixed(1)} s`;
+  sceneBtns.forEach((b, i) => b.classList.toggle('on', t >= BLOCKS[i].start && t < BLOCKS[i].end)); }
+function loop(ts){ if(!playing) return; const dt = last ? (ts - last) / 1000 : 0; last = ts; t += dt;
+  if(t >= DUR){ t = DUR; playing = false; playB.textContent = '↺ Repetir'; } draw(); if(playing) requestAnimationFrame(loop); }
+playB.onclick = () => { if(t >= DUR) t = 0; playing = !playing; playB.textContent = playing ? '❚❚ Pausa' : '▶ Reproducir'; last = 0; if(playing) requestAnimationFrame(loop); };
+seek.oninput = () => { t = +seek.value; draw(); };
+document.addEventListener('keydown', e => { if(e.code === 'Space' && e.target === document.body){ e.preventDefault(); playB.click(); } });
+document.getElementById('srt').onclick = () => { const u = URL.createObjectURL(new Blob([buildSRT()], {type:'text/plain'}));
+  const l = document.createElement('a'); l.href = u; l.download = 'ecogestion_ruta_esg.srt'; l.click(); URL.revokeObjectURL(u); };
+(document.fonts ? document.fonts.ready : Promise.resolve()).then(() => { subKey = ''; draw(); });
+draw();
+</script>
+</body>
+</html>
