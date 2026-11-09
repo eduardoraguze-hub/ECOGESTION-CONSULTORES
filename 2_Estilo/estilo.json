@@ -1,0 +1,46 @@
+{
+  "marca": "EcoGestión Consultores",
+  "fuente_origen": "Paleta y logo extraídos de EcoGestion_Web_v2 (2).html (:root CSS)",
+  "colores": {
+    "verde_principal": "#1B7C3B",
+    "verde_oscuro":    "#145C2C",
+    "verde_acento":    "#7DD4A0",
+    "verde_claro":     "#E8F4EC",
+    "azul":            "#1A4FA0",
+    "azul_claro":      "#E6F1FB",
+    "gris_oscuro":     "#2D2D2D",
+    "fondo_oscuro":    "#0A1F10",
+    "blanco":          "#FFFFFF"
+  },
+  "tipografia": {
+    "titulos": "2_Estilo/fuentes/Inter-ExtraBold.otf",
+    "subtitulos": "2_Estilo/fuentes/Inter-Bold.otf",
+    "nota": "La web usa Trebuchet MS; Inter es su sustituto libre para video. Si tienes la fuente oficial de marca (.ttf/.otf), colócala en 2_Estilo/fuentes/ y actualiza estas rutas."
+  },
+  "logo": {
+    "archivo": "2_Estilo/logo/logo_ecogestion_transparente.png",
+    "posicion": "superior_derecha",
+    "ancho_px": 170,
+    "opacidad": 0.9
+  },
+  "subtitulos": {
+    "tamano": 64,
+    "color_texto": "#FFFFFF",
+    "color_resaltado": "#7DD4A0",
+    "contorno": "#0A1F10",
+    "grosor_contorno": 5,
+    "posicion_y_desde_abajo": 420,
+    "max_palabras_por_linea": 4,
+    "mayusculas": true
+  },
+  "color_grading": { "contraste": 1.06, "saturacion": 1.12, "brillo": 0.01, "gamma_verde": 1.02 },
+  "ritmo": {
+    "corte_silencios": true,
+    "umbral_silencio_db": -35,
+    "silencio_minimo_s": 0.45,
+    "intro_s": 1.2,
+    "outro_s": 2.0,
+    "transicion_s": 0.25
+  },
+  "salida": { "resolucion": "1080x1920", "fps": 30, "codec": "H.264 High, CRF 18", "audio": "AAC 192k, -14 LUFS", "carpeta": "3_Entregas" }
+}

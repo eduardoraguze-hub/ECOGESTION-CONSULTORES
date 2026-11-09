@@ -1,0 +1,10 @@
+{
+  "_nota": "Parámetros base de ritmo/cortes/subtítulos/animaciones. Se recalibran al analizar los videos de referencia que subas a esta carpeta.",
+  "ritmo": "ágil: corte de silencios >0.45 s, plano promedio 2–4 s, push-in continuo 4 %",
+  "cortes": "jump cuts en silencios + fade 0.3 s de entrada + cierre con tarjeta de logo",
+  "subtitulos": "bloques de 4 palabras, MAYÚSCULAS, karaoke palabra a palabra en verde #7DD4A0",
+  "animaciones": "gancho 0–3 s con pop de escala, etiqueta de marca deslizante, logo animado en cierre",
+  "etiqueta_gancho": "ECOGESTIÓN CONSULTORES",
+  "cta_cierre": "Sostenibilidad que genera valor",
+  "cta_web": "ecogestionconsultores.com"
+}
