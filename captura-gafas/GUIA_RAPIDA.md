@@ -142,9 +142,9 @@ Las coordenadas vienen cargadas desde fuentes públicas y apuntan al poblado de 
 | 05 | Atencingo | Puebla (Chietla) | 18.51, -98.61 | ✅ Localidad |
 | 06 | San Cristóbal | Veracruz (Carlos A. Carrillo) | 18.37, -95.74 | ✅ Cabecera |
 | 07 | Tamazula | Jalisco (Tamazula de Gordiano) | 19.68, -103.25 | ✅ Cabecera |
-| 08 | **Manzana** | **Por confirmar** | — | ❌ **Capturar en Google Maps** |
+| 08 | Puga (Manzana) | Nayarit (Francisco I. Madero, Tepic) | 21.5825, -104.8244 | ✅ Localidad |
 
-> Mientras el **Ingenio Manzana** no tenga coordenadas, sus fotos se clasifican **solo con la sesión** (paso 🟢). Todo lo demás funciona igual.
+> Los 8 ingenios ya tienen coordenadas. En el menú, el Ingenio Puga también se encuentra como *Manzana*.
 
 ---
 

@@ -80,7 +80,7 @@ En Mac/Linux: `./iniciar_mac_linux.sh`, `abrir_sesion_mac.command` y `cerrar_ses
 | Ingenio_05 | Atencingo | Puebla | 18.51, -98.61 | Localidad Atencingo |
 | Ingenio_06 | San Cristóbal | Veracruz | 18.37, -95.74 | Cabecera de Carlos A. Carrillo |
 | Ingenio_07 | Tamazula | Jalisco | 19.68, -103.25 | IIEG Jalisco 2026 (cabecera) |
-| Ingenio_08 | Manzana | — | sin datos | No se encontró en fuentes públicas: capturar |
+| Ingenio_08 | Puga (alias *Manzana*) | Nayarit | 21.5825, -104.8244 | Wikidata: localidad Francisco I. Madero (Puga), Tepic |
 
 Cada ingenio tiene dos radios: `radio_m` (fábrica, 3–5 km) y `radio_zona_abasto_m` (campos de caña, 40 km). Los ingenios más cercanos entre sí (Melchor Ocampo y Tamazula) están a unos 104 km, así que las zonas no se traslapan.
 

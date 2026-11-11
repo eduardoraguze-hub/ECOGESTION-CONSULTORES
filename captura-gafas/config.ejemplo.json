@@ -94,15 +94,20 @@
     },
     {
       "codigo": "Ingenio_08",
-      "nombre": "Ingenio Manzana",
-      "lat": null,
-      "lon": null,
+      "nombre": "Ingenio Puga",
+      "lat": 21.5825,
+      "lon": -104.8244,
       "radio_m": 3000,
       "radio_zona_abasto_m": 40000,
-      "estado": "POR CONFIRMAR",
-      "ubicacion": "POR CONFIRMAR",
-      "fuente_coordenadas": "No se encontró en fuentes públicas: capturar desde Google Maps",
-      "precision": "SIN COORDENADAS - solo clasifica por sesión"
+      "estado": "Nayarit",
+      "ubicacion": "Francisco I. Madero (Puga), Tepic, a 14 km de Tepic",
+      "fuente_coordenadas": "Wikidata Q5866025 (localidad INEGI 180170122)",
+      "precision": "aprox. <1 km",
+      "alias": [
+        "Manzana",
+        "Ingenio Manzana",
+        "Francisco I. Madero"
+      ]
     },
     {
       "codigo": "Corporativo",

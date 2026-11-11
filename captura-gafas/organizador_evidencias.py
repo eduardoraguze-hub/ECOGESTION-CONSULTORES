@@ -217,7 +217,7 @@ def buscar_ingenio(cfg, texto: str):
     if t.isdigit() and 1 <= int(t) <= len(lista):
         return lista[int(t) - 1]["nombre"]
     for ing in lista:
-        claves = {_normal(ing["nombre"]), _normal(ing.get("codigo", ""))}
+        claves = {_normal(ing["nombre"]), _normal(ing.get("codigo", ""))} | {_normal(x) for x in ing.get("alias", [])}
         if _normal(t) in claves:
             return ing["nombre"]
     parciales = [i["nombre"] for i in lista if _normal(t) and _normal(t) in _normal(i["nombre"])]
