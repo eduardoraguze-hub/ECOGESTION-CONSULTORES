@@ -4,15 +4,15 @@ Cada foto o video que tomas con las gafas termina, sin que tengas que hacer nada
 
 ```
 Evidencias_Auditoria/
-├── Ingenio_01/
+├── Ingenio_Melchor_Ocampo/
 │   └── SMETA/
 │       └── 2026-11_SMETA_Anual/
 │           ├── registro_evidencias.csv   ← listo para el informe
 │           ├── 02_Salud_Seguridad/
-│           │   ├── Fotos/20261111_093012_Ingenio_01_SMETA_a3f9c1.jpg
+│           │   ├── Fotos/20261111_093012_Ingenio_Melchor_Ocampo_SMETA_a3f9c1.jpg
 │           │   └── Videos/...
 │           └── 05_Trabajo_Infantil_Campo/...
-├── Ingenio_02/ISO_45001/...
+├── Ingenio_Pujiltic/ISO_45001/...
 ├── _Sin_Clasificar/2026-11-11/...        ← lo que no se pudo ubicar
 └── _registro_maestro.csv                 ← todas las evidencias de todos los ingenios
 ```
@@ -56,25 +56,42 @@ Instala el cliente de escritorio de OneDrive (o Google Drive para escritorio) en
 
 ## Paso 4. El organizador
 
-```bash
-# 1) Configurar (una sola vez)
-cp config.ejemplo.json config.json        # Windows: copy config.ejemplo.json config.json
-#    Edita config.json: rutas, nombres reales de los 8 ingenios y sus coordenadas.
+> 👉 **Instrucciones paso a paso, sin tecnicismos: [GUIA_RAPIDA.md](GUIA_RAPIDA.md)**
 
-# 2) Arrancar el servicio (queda vigilando la carpeta)
-#    Windows: doble clic en iniciar_windows.bat
-#    Mac/Linux: ./iniciar_mac_linux.sh
-```
+| Archivo (Windows, doble clic) | Para qué |
+|---|---|
+| `1_INSTALAR_Y_ARRANCAR.bat` | Solo una vez: instala Python y Pillow, crea `config.json`, arranca el organizador oculto y lo programa al inicio de Windows |
+| `2_ABRIR_SESION.bat` | Asistente con menú numerado: ingenio → norma → pilar |
+| `3_CERRAR_SESION.bat` | Cierra la sesión |
+| `4_VER_ESTADO.bat` | Sesión activa, rutas y últimas evidencias (`organizador.log`) |
 
-Para que arranque solo al encender la PC en Windows: `Win+R` → `shell:startup` → pega ahí un acceso directo a `iniciar_windows.bat`.
+En Mac/Linux: `./iniciar_mac_linux.sh`, `abrir_sesion_mac.command` y `cerrar_sesion_mac.command`.
+
+`config.json` trae `"carpeta_entrada": "auto"` y `"carpeta_destino": "auto"`: detecta `OneDrive*/Imágenes/Álbum de cámara` (o `Pictures/Camera Roll`) y guarda en `OneDrive*/Evidencias_Auditoria`. Si prefieres otras rutas, escríbelas en lugar de `auto`.
+
+### Ingenios y geocercas
+
+| Código | Ingenio | Estado | lat, lon | Fuente / precisión |
+|---|---|---|---|---|
+| Ingenio_01 | Melchor Ocampo | Jalisco | 19.78, -104.24 | Estimada (localidad, Autlán/El Grullo): **verificar** |
+| Ingenio_02 | El Higo | Veracruz | 21.7739, -98.4543 | WRI Global Power Plant Database |
+| Ingenio_03 | Pujiltic | Chiapas | 16.2792, -92.4532 | Localidad San Francisco Pujiltic |
+| Ingenio_04 | Mahuixtlán | Veracruz | 19.41, -96.96 | Estimada (4.3 km al S de Coatepec): **verificar** |
+| Ingenio_05 | Atencingo | Puebla | 18.51, -98.61 | Localidad Atencingo |
+| Ingenio_06 | San Cristóbal | Veracruz | 18.37, -95.74 | Cabecera de Carlos A. Carrillo |
+| Ingenio_07 | Tamazula | Jalisco | 19.68, -103.25 | IIEG Jalisco 2026 (cabecera) |
+| Ingenio_08 | Manzana | — | sin datos | No se encontró en fuentes públicas: capturar |
+
+Cada ingenio tiene dos radios: `radio_m` (fábrica, 3–5 km) y `radio_zona_abasto_m` (campos de caña, 40 km). Los ingenios más cercanos entre sí (Melchor Ocampo y Tamazula) están a unos 104 km, así que las zonas no se traslapan.
 
 ### Antes de cada auditoría: 1 comando
 
 ```bash
-python organizador_evidencias.py sesion --ingenio Ingenio_03 --norma SMETA \
+python organizador_evidencias.py sesion --ingenio pujiltic --norma SMETA \
        --pilar 05_Trabajo_Infantil_Campo --auditoria 2026-11_SMETA_Anual
 ```
 
+- `--ingenio` acepta el nombre (`pujiltic`, `"Ingenio San Cristóbal"`), el código (`Ingenio_03`) o el número (`3`).
 - Todo lo que captures en las siguientes **12 h** (ajustable con `--horas`) se va a esa auditoría.
 - ¿Cambias de pilar o de área durante el recorrido? Vuelve a ejecutar `sesion` con otro `--pilar`.
 - Al terminar: `python organizador_evidencias.py cerrar`.
@@ -88,9 +105,10 @@ Si se te olvida abrir la sesión, no se pierde nada: la foto se clasifica por **
 
 | Prioridad | Condición | Resultado |
 |-----------|-----------|-----------|
-| 1 | El GPS cae dentro de la geocerca de un ingenio y hay sesión vigente | Ingenio del **GPS**, con la norma y el pilar de la sesión. Si el ingenio no coincide con la sesión, se genera una **alerta** |
+| 1 | El GPS cae dentro de la **fábrica** de un ingenio y hay sesión vigente | Ingenio del **GPS**, con la norma y el pilar de la sesión. Si el ingenio no coincide con la sesión, se genera una **alerta** |
+| 1b | El GPS cae en la **zona de abasto** (campo) de otro ingenio y hay sesión vigente | Manda la **sesión**, con una alerta en el registro |
 | 2 | No hay GPS, pero hay sesión vigente | Ingenio, norma y pilar de la sesión |
-| 3 | Hay GPS y no hay sesión | Ingenio del GPS → `Inspeccion_Campo/<fecha>` |
+| 3 | Hay GPS (fábrica o campo) y no hay sesión | Ingenio del GPS → `Inspeccion_Campo/<fecha>` (`GPS-fabrica` o `GPS-campo`) |
 | 4 | No hay GPS ni sesión | `_Sin_Clasificar/<fecha>` |
 
 ## Valor para la auditoría (cadena de custodia)

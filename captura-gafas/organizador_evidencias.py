@@ -106,7 +106,13 @@ def distancia_m(lat1, lon1, lat2, lon2) -> float:
 
 
 def log(msg: str) -> None:
-    print(f"[{datetime.now():%Y-%m-%d %H:%M:%S}] {msg}", flush=True)
+    linea = f"[{datetime.now():%Y-%m-%d %H:%M:%S}] {msg}"
+    print(linea, flush=True)
+    try:  # también al archivo, para cuando corre oculto en segundo plano
+        with (BASE / "organizador.log").open("a", encoding="utf-8") as f:
+            f.write(linea + "\n")
+    except OSError:
+        pass
 
 
 # ----------------------------------------------------------------------------- metadatos
@@ -169,18 +175,75 @@ def metadatos_video(ruta: Path):
     return fecha, lat, lon
 
 
+# ----------------------------------------------------------------------------- rutas "auto"
+def _carpetas_onedrive():
+    casa = Path.home()
+    return sorted([p for p in casa.glob("OneDrive*") if p.is_dir()], key=lambda p: ("-" not in p.name, p.name))
+
+
+def resolver_entrada(valor: str) -> Path:
+    """'auto' = busca la carpeta de cámara que OneDrive sincroniza en la PC."""
+    if valor.strip().lower() != "auto":
+        return Path(valor).expanduser()
+    for od in _carpetas_onedrive():
+        for img in ("Imágenes", "Imagenes", "Pictures"):
+            for cam in ("Álbum de cámara", "Album de camara", "Camera Roll", "Carga de cámara", "Camera Uploads"):
+                if (od / img / cam).is_dir():
+                    return od / img / cam
+    for alt in ("Google Drive/Mi unidad/Gafas", "Google Drive/My Drive/Gafas", "Pictures/Camera Roll"):
+        if (Path.home() / alt).is_dir():
+            return Path.home() / alt
+    return Path.home() / "OneDrive" / "Imágenes" / "Álbum de cámara"
+
+
+def resolver_destino(valor: str) -> Path:
+    """'auto' = Evidencias_Auditoria dentro de OneDrive (respaldo en la nube) o en la carpeta personal."""
+    if valor.strip().lower() != "auto":
+        return Path(valor).expanduser()
+    od = _carpetas_onedrive()
+    return (od[0] if od else Path.home()) / "Evidencias_Auditoria"
+
+
+def _normal(t: str) -> str:
+    import unicodedata
+    t = unicodedata.normalize("NFKD", t).encode("ascii", "ignore").decode().lower()
+    return re.sub(r"[^a-z0-9]", "", t.replace("ingenio", ""))
+
+
+def buscar_ingenio(cfg, texto: str):
+    """Acepta 'Pujiltic', 'pujiltic', 'Ingenio Pujiltic', '3' o 'Ingenio_03'."""
+    lista = cfg.get("ingenios", [])
+    t = texto.strip()
+    if t.isdigit() and 1 <= int(t) <= len(lista):
+        return lista[int(t) - 1]["nombre"]
+    for ing in lista:
+        claves = {_normal(ing["nombre"]), _normal(ing.get("codigo", ""))}
+        if _normal(t) in claves:
+            return ing["nombre"]
+    parciales = [i["nombre"] for i in lista if _normal(t) and _normal(t) in _normal(i["nombre"])]
+    return parciales[0] if len(parciales) == 1 else None
+
+
 # ----------------------------------------------------------------------------- clasificación
 def ingenio_por_gps(cfg, lat, lon):
+    """Devuelve (ingenio, zona). zona = 'fabrica' (dentro del batey) o 'campo' (zona de abasto de caña)."""
     if lat is None or lon is None:
-        return None
-    mejor = None
+        return None, None
+    fabrica = campo = None
     for ing in cfg.get("ingenios", []):
         if ing.get("lat") is None or ing.get("lon") is None:
             continue
         d = distancia_m(lat, lon, ing["lat"], ing["lon"])
-        if d <= (ing.get("radio_m") or cfg.get("radio_geocerca_m", 3000)) and (mejor is None or d < mejor[1]):
-            mejor = (ing["nombre"], d)
-    return mejor[0] if mejor else None
+        if d <= (ing.get("radio_m") or cfg.get("radio_geocerca_m", 3000)) and (fabrica is None or d < fabrica[1]):
+            fabrica = (ing["nombre"], d)
+        elif d <= (ing.get("radio_zona_abasto_m") or cfg.get("radio_zona_abasto_m", 40000)) \
+                and (campo is None or d < campo[1]):
+            campo = (ing["nombre"], d)
+    if fabrica:
+        return fabrica[0], "fabrica"
+    if campo:
+        return campo[0], "campo"
+    return None, None
 
 
 def sesion_vigente(sesion, fecha: datetime):
@@ -193,19 +256,21 @@ def sesion_vigente(sesion, fecha: datetime):
 
 
 def clasificar(cfg, sesion, fecha, lat, lon):
-    ing_gps = ingenio_por_gps(cfg, lat, lon)
+    ing_gps, zona = ingenio_por_gps(cfg, lat, lon)
     ses = sesion_vigente(sesion, fecha)
     alerta = ""
     if ses:
-        ingenio = ing_gps or ses["ingenio"]
+        # Solo el GPS dentro de una FÁBRICA corrige a la sesión; en campo manda la sesión.
+        ingenio = ing_gps if (ing_gps and zona == "fabrica") else ses["ingenio"]
         if ing_gps and ing_gps != ses["ingenio"]:
-            alerta = f"GPS indica {ing_gps}, la sesión indica {ses['ingenio']}"
-        fuente = "GPS+sesion" if ing_gps else "sesion"
+            alerta = f"GPS indica {ing_gps} ({zona}), la sesión indica {ses['ingenio']}"
+        fuente = f"GPS-{zona}+sesion" if ing_gps else "sesion"
         return dict(ingenio=ingenio, norma=ses["norma"], auditoria=ses.get("auditoria") or f"{fecha:%Y-%m-%d}",
                     pilar=ses.get("pilar") or "00_General", fuente=fuente, alerta=alerta)
     if ing_gps:
         return dict(ingenio=ing_gps, norma=cfg.get("norma_por_defecto", "Inspeccion_Campo"),
-                    auditoria=f"{fecha:%Y-%m-%d}", pilar="00_General", fuente="GPS", alerta="Sin sesión activa")
+                    auditoria=f"{fecha:%Y-%m-%d}", pilar="00_General", fuente=f"GPS-{zona}",
+                    alerta="Sin sesión activa")
     return dict(ingenio="_Sin_Clasificar", norma="", auditoria=f"{fecha:%Y-%m-%d}", pilar="",
                 fuente="ninguna", alerta="Sin GPS ni sesión: asignar manualmente")
 
@@ -214,8 +279,8 @@ def clasificar(cfg, sesion, fecha, lat, lon):
 class Organizador:
     def __init__(self, cfg: dict):
         self.cfg = cfg
-        self.entrada = Path(cfg["carpeta_entrada"]).expanduser()
-        self.destino = Path(cfg["carpeta_destino"]).expanduser()
+        self.entrada = resolver_entrada(cfg["carpeta_entrada"])
+        self.destino = resolver_destino(cfg["carpeta_destino"])
         self.ext_foto = {e.lower() for e in cfg.get("extensiones_foto", [".jpg", ".jpeg", ".heic", ".png", ".dng"])}
         self.ext_video = {e.lower() for e in cfg.get("extensiones_video", [".mp4", ".mov", ".m4v"])}
         self.indice_ruta = self.destino / ".indice_hashes.json"
@@ -330,8 +395,10 @@ class Organizador:
 # ----------------------------------------------------------------------------- comandos
 def cmd_sesion(args, cfg):
     nombres = [i["nombre"] for i in cfg.get("ingenios", [])]
-    if args.ingenio not in nombres:
+    encontrado = buscar_ingenio(cfg, args.ingenio)
+    if not encontrado:
         sys.exit(f"[ERROR] Ingenio '{args.ingenio}' no está en config.json. Opciones: {', '.join(nombres)}")
+    args.ingenio = encontrado
     normas = cfg.get("normas", {})
     if args.norma not in normas:
         sys.exit(f"[ERROR] Norma '{args.norma}' no está en config.json. Opciones: {', '.join(normas)}")
@@ -346,6 +413,34 @@ def cmd_sesion(args, cfg):
     guardar_json(ARCHIVO_SESION, sesion)
     log(f"Sesión activa: {sesion['ingenio']} / {sesion['norma']} / {sesion['pilar'] or '00_General'} "
         f"/ {sesion['auditoria']} (vigencia {args.horas} h)")
+
+
+def _elegir(titulo, opciones, permitir_vacio=False):
+    print(f"\n{titulo}")
+    for i, o in enumerate(opciones, 1):
+        print(f"  {i:>2}. {o}")
+    if permitir_vacio:
+        print("   0. (General / sin pilar)")
+    while True:
+        r = input("Escribe el número y pulsa Enter: ").strip()
+        if permitir_vacio and r in ("", "0"):
+            return ""
+        if r.isdigit() and 1 <= int(r) <= len(opciones):
+            return opciones[int(r) - 1]
+        print("  Número no válido, intenta de nuevo.")
+
+
+def cmd_menu(args, cfg):
+    """Asistente paso a paso para abrir una sesión sin escribir comandos."""
+    print("=" * 60 + "\n  NUEVA SESIÓN DE AUDITORÍA / INSPECCIÓN\n" + "=" * 60)
+    ingenio = _elegir("¿En qué ingenio estás?", [i["nombre"] for i in cfg["ingenios"]])
+    norma = _elegir("¿Qué norma o tipo de visita?", list(cfg["normas"]))
+    pilar = _elegir("¿Qué pilar o área vas a recorrer?", cfg["normas"][norma], True) if cfg["normas"][norma] else ""
+    sugerida = f"{datetime.now():%Y-%m}_{norma}"
+    nombre = input(f"\nNombre de la auditoría [Enter = {sugerida}]: ").strip() or sugerida
+    cmd_sesion(argparse.Namespace(ingenio=ingenio, norma=norma, pilar=pilar, auditoria=nombre, horas=12), cfg)
+    print("\nListo. Ya puedes tomar fotos y videos con las gafas. Se guardarán solos.")
+    print("Cuando termines, abre 'CERRAR_SESION'. Para cambiar de pilar, vuelve a abrir este asistente.")
 
 
 def cmd_cerrar(args, cfg):
@@ -364,8 +459,8 @@ def cmd_estado(args, cfg):
     print(json.dumps(sesion, ensure_ascii=False, indent=2) if sesion else "Sin sesión.")
     vigente = sesion_vigente(sesion, datetime.now()) if sesion else None
     print("Vigente ahora:", "SÍ" if vigente else "NO")
-    print("Entrada:", cfg["carpeta_entrada"])
-    print("Destino:", cfg["carpeta_destino"])
+    print("Entrada:", resolver_entrada(cfg["carpeta_entrada"]))
+    print("Destino:", resolver_destino(cfg["carpeta_destino"]))
 
 
 def cmd_procesar(args, cfg):
@@ -394,6 +489,7 @@ def main():
     s.add_argument("--pilar", default="")
     s.add_argument("--auditoria", default="")
     s.add_argument("--horas", type=float, default=12)
+    sub.add_parser("menu", help="Asistente para abrir sesión (sin escribir comandos)")
     sub.add_parser("cerrar", help="Cierra la sesión activa")
     sub.add_parser("estado", help="Muestra la sesión y rutas")
     sub.add_parser("procesar", help="Procesa la bandeja una vez")
@@ -403,9 +499,12 @@ def main():
 
     ruta_cfg = Path(args.config)
     cfg = cargar_json(ruta_cfg)
+    if cfg is None and ruta_cfg == CONFIG_POR_DEFECTO and (BASE / "config.ejemplo.json").exists():
+        shutil.copy(BASE / "config.ejemplo.json", ruta_cfg)  # primera vez: crea config.json solo
+        cfg = cargar_json(ruta_cfg)
     if cfg is None:
-        sys.exit(f"[ERROR] No existe {ruta_cfg}. Copia config.ejemplo.json como config.json y edítalo.")
-    {"sesion": cmd_sesion, "cerrar": cmd_cerrar, "estado": cmd_estado,
+        sys.exit(f"[ERROR] No existe {ruta_cfg}.")
+    {"sesion": cmd_sesion, "menu": cmd_menu, "cerrar": cmd_cerrar, "estado": cmd_estado,
      "procesar": cmd_procesar, "vigilar": cmd_vigilar}[args.cmd](args, cfg)
 
 

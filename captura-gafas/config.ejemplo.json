@@ -1,38 +1,182 @@
 {
-  "_instrucciones": "Copia este archivo como config.json. Ajusta las rutas a tu PC y las coordenadas (lat/lon) de cada ingenio. Si un ingenio no tiene coordenadas, solo se clasificará por sesión.",
-
-  "carpeta_entrada": "~/OneDrive/Imágenes/Álbum de cámara",
-  "carpeta_destino": "~/OneDrive/Sostenibilidad/Evidencias_Auditoria",
+  "_instrucciones": "No necesitas editar nada para empezar: 'auto' detecta OneDrive solo. Coordenadas obtenidas de fuentes públicas (nov-2026), aproximadas al poblado del ingenio: verifícalas en Google Maps (ver GUIA_RAPIDA.md, paso 6). radio_m = fábrica/batey; radio_zona_abasto_m = campos de caña del ingenio.",
+  "carpeta_entrada": "auto",
+  "carpeta_destino": "auto",
   "accion": "copiar",
   "incluir_subcarpetas": true,
   "segundos_estabilidad": 10,
   "radio_geocerca_m": 3000,
   "norma_por_defecto": "Inspeccion_Campo",
-
   "ingenios": [
-    { "nombre": "Ingenio_01", "lat": null, "lon": null, "radio_m": 3000 },
-    { "nombre": "Ingenio_02", "lat": null, "lon": null, "radio_m": 3000 },
-    { "nombre": "Ingenio_03", "lat": null, "lon": null, "radio_m": 3000 },
-    { "nombre": "Ingenio_04", "lat": null, "lon": null, "radio_m": 3000 },
-    { "nombre": "Ingenio_05", "lat": null, "lon": null, "radio_m": 3000 },
-    { "nombre": "Ingenio_06", "lat": null, "lon": null, "radio_m": 3000 },
-    { "nombre": "Ingenio_07", "lat": null, "lon": null, "radio_m": 3000 },
-    { "nombre": "Ingenio_08", "lat": null, "lon": null, "radio_m": 3000 },
-    { "nombre": "Corporativo", "lat": null, "lon": null, "radio_m": 500 }
+    {
+      "codigo": "Ingenio_01",
+      "nombre": "Ingenio Melchor Ocampo",
+      "lat": 19.78,
+      "lon": -104.24,
+      "radio_m": 5000,
+      "radio_zona_abasto_m": 40000,
+      "estado": "Jalisco",
+      "ubicacion": "Autlán de Navarro (13 km al E de Autlán, junto a El Grullo)",
+      "fuente_coordenadas": "Estimada: localidad 'Ingenio Melchor Ocampo' + IIEG El Grullo (19.80,-104.22)",
+      "precision": "aprox. 2-3 km - VERIFICAR"
+    },
+    {
+      "codigo": "Ingenio_02",
+      "nombre": "Ingenio El Higo",
+      "lat": 21.7739,
+      "lon": -98.4543,
+      "radio_m": 3000,
+      "radio_zona_abasto_m": 40000,
+      "estado": "Veracruz",
+      "ubicacion": "El Higo",
+      "fuente_coordenadas": "WRI Global Power Plant Database (planta de cogeneración del ingenio)",
+      "precision": "punto de planta"
+    },
+    {
+      "codigo": "Ingenio_03",
+      "nombre": "Ingenio Pujiltic",
+      "lat": 16.2792,
+      "lon": -92.4532,
+      "radio_m": 3000,
+      "radio_zona_abasto_m": 40000,
+      "estado": "Chiapas",
+      "ubicacion": "San Francisco Pujiltic, Venustiano Carranza",
+      "fuente_coordenadas": "Coordenadas de la localidad San Francisco Pujiltic",
+      "precision": "aprox. <1 km"
+    },
+    {
+      "codigo": "Ingenio_04",
+      "nombre": "Ingenio Mahuixtlán",
+      "lat": 19.41,
+      "lon": -96.96,
+      "radio_m": 4000,
+      "radio_zona_abasto_m": 40000,
+      "estado": "Veracruz",
+      "ubicacion": "Mahuixtlán, Coatepec",
+      "fuente_coordenadas": "Estimada: 4.3 km al S del centro de Coatepec",
+      "precision": "aprox. 1-2 km - VERIFICAR"
+    },
+    {
+      "codigo": "Ingenio_05",
+      "nombre": "Ingenio Atencingo",
+      "lat": 18.51,
+      "lon": -98.61,
+      "radio_m": 3000,
+      "radio_zona_abasto_m": 40000,
+      "estado": "Puebla",
+      "ubicacion": "Atencingo, Chietla",
+      "fuente_coordenadas": "Coordenadas de la localidad Atencingo",
+      "precision": "aprox. ~1 km"
+    },
+    {
+      "codigo": "Ingenio_06",
+      "nombre": "Ingenio San Cristóbal",
+      "lat": 18.37,
+      "lon": -95.74,
+      "radio_m": 4000,
+      "radio_zona_abasto_m": 40000,
+      "estado": "Veracruz",
+      "ubicacion": "Carlos A. Carrillo (ribera del río Papaloapan)",
+      "fuente_coordenadas": "Coordenadas de la cabecera Carlos A. Carrillo",
+      "precision": "aprox. ~1 km"
+    },
+    {
+      "codigo": "Ingenio_07",
+      "nombre": "Ingenio Tamazula",
+      "lat": 19.68,
+      "lon": -103.25,
+      "radio_m": 4000,
+      "radio_zona_abasto_m": 40000,
+      "estado": "Jalisco",
+      "ubicacion": "Tamazula de Gordiano",
+      "fuente_coordenadas": "IIEG Jalisco, cuadernillo municipal 2026 (cabecera)",
+      "precision": "aprox. ~1 km"
+    },
+    {
+      "codigo": "Ingenio_08",
+      "nombre": "Ingenio Manzana",
+      "lat": null,
+      "lon": null,
+      "radio_m": 3000,
+      "radio_zona_abasto_m": 40000,
+      "estado": "POR CONFIRMAR",
+      "ubicacion": "POR CONFIRMAR",
+      "fuente_coordenadas": "No se encontró en fuentes públicas: capturar desde Google Maps",
+      "precision": "SIN COORDENADAS - solo clasifica por sesión"
+    },
+    {
+      "codigo": "Corporativo",
+      "nombre": "Corporativo",
+      "lat": null,
+      "lon": null,
+      "radio_m": 500,
+      "radio_zona_abasto_m": 500,
+      "estado": "Sinaloa",
+      "ubicacion": "Culiacán",
+      "fuente_coordenadas": "Capturar desde Google Maps",
+      "precision": "SIN COORDENADAS"
+    }
   ],
-
   "normas": {
-    "SMETA": ["01_Trabajo", "02_Salud_Seguridad", "03_Medio_Ambiente", "04_Etica_Empresarial", "05_Trabajo_Infantil_Campo"],
-    "ISO_45001": ["01_Identificacion_Peligros", "02_EPP", "03_Bloqueo_Etiquetado", "04_Emergencias", "05_Contratistas"],
-    "ISO_14001": ["01_Residuos", "02_Agua_Efluentes", "03_Emisiones", "04_Quimicos", "05_Biodiversidad"],
-    "ISO_37001": ["01_Controles_Financieros", "02_Debida_Diligencia", "03_Regalos_Hospitalidad"],
-    "EcoVadis": ["01_Ambiental", "02_Laboral_DDHH", "03_Etica", "04_Compras_Sostenibles"],
+    "SMETA": [
+      "01_Trabajo",
+      "02_Salud_Seguridad",
+      "03_Medio_Ambiente",
+      "04_Etica_Empresarial",
+      "05_Trabajo_Infantil_Campo"
+    ],
+    "ISO_45001": [
+      "01_Identificacion_Peligros",
+      "02_EPP",
+      "03_Bloqueo_Etiquetado",
+      "04_Emergencias",
+      "05_Contratistas"
+    ],
+    "ISO_14001": [
+      "01_Residuos",
+      "02_Agua_Efluentes",
+      "03_Emisiones",
+      "04_Quimicos",
+      "05_Biodiversidad"
+    ],
+    "ISO_37001": [
+      "01_Controles_Financieros",
+      "02_Debida_Diligencia",
+      "03_Regalos_Hospitalidad"
+    ],
+    "EcoVadis": [
+      "01_Ambiental",
+      "02_Laboral_DDHH",
+      "03_Etica",
+      "04_Compras_Sostenibles"
+    ],
     "GNP": [],
-    "Proveeduria_Sostenible": ["01_Productores_Cana", "02_Proveedores_Criticos"],
-    "Economia_Circular": ["01_Biochar", "02_Bagazo_Energia", "03_Cachaza_Vinaza"],
-    "Inspeccion_Campo": ["01_Zafra", "02_Cosecha", "03_Comunidad"]
+    "Proveeduria_Sostenible": [
+      "01_Productores_Cana",
+      "02_Proveedores_Criticos"
+    ],
+    "Economia_Circular": [
+      "01_Biochar",
+      "02_Bagazo_Energia",
+      "03_Cachaza_Vinaza"
+    ],
+    "Inspeccion_Campo": [
+      "01_Zafra",
+      "02_Cosecha",
+      "03_Comunidad"
+    ]
   },
-
-  "extensiones_foto": [".jpg", ".jpeg", ".heic", ".png", ".dng"],
-  "extensiones_video": [".mp4", ".mov", ".m4v"]
+  "extensiones_foto": [
+    ".jpg",
+    ".jpeg",
+    ".heic",
+    ".png",
+    ".dng"
+  ],
+  "extensiones_video": [
+    ".mp4",
+    ".mov",
+    ".m4v"
+  ],
+  "radio_zona_abasto_m": 40000
 }
