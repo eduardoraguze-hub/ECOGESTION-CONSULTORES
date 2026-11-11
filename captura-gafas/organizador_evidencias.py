@@ -84,8 +84,9 @@ def guardar_json(ruta: Path, datos) -> None:
 
 
 def limpiar(texto: str) -> str:
-    texto = re.sub(r"[^\w\-]+", "_", str(texto).strip(), flags=re.UNICODE)
-    return texto.strip("_") or "SinNombre"
+    original = str(texto).strip()
+    texto = re.sub(r"[^\w\-]+", "_", original, flags=re.UNICODE).strip("_") or "SinNombre"
+    return ("_" + texto) if original.startswith("_") else texto  # conserva carpetas de sistema (_Sin_Clasificar)
 
 
 def sha256(ruta: Path) -> str:
