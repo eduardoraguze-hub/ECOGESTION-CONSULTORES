@@ -1,0 +1,38 @@
+{
+  "_instrucciones": "Copia este archivo como config.json. Ajusta las rutas a tu PC y las coordenadas (lat/lon) de cada ingenio. Si un ingenio no tiene coordenadas, solo se clasificará por sesión.",
+
+  "carpeta_entrada": "~/OneDrive/Imágenes/Álbum de cámara",
+  "carpeta_destino": "~/OneDrive/Sostenibilidad/Evidencias_Auditoria",
+  "accion": "copiar",
+  "incluir_subcarpetas": true,
+  "segundos_estabilidad": 10,
+  "radio_geocerca_m": 3000,
+  "norma_por_defecto": "Inspeccion_Campo",
+
+  "ingenios": [
+    { "nombre": "Ingenio_01", "lat": null, "lon": null, "radio_m": 3000 },
+    { "nombre": "Ingenio_02", "lat": null, "lon": null, "radio_m": 3000 },
+    { "nombre": "Ingenio_03", "lat": null, "lon": null, "radio_m": 3000 },
+    { "nombre": "Ingenio_04", "lat": null, "lon": null, "radio_m": 3000 },
+    { "nombre": "Ingenio_05", "lat": null, "lon": null, "radio_m": 3000 },
+    { "nombre": "Ingenio_06", "lat": null, "lon": null, "radio_m": 3000 },
+    { "nombre": "Ingenio_07", "lat": null, "lon": null, "radio_m": 3000 },
+    { "nombre": "Ingenio_08", "lat": null, "lon": null, "radio_m": 3000 },
+    { "nombre": "Corporativo", "lat": null, "lon": null, "radio_m": 500 }
+  ],
+
+  "normas": {
+    "SMETA": ["01_Trabajo", "02_Salud_Seguridad", "03_Medio_Ambiente", "04_Etica_Empresarial", "05_Trabajo_Infantil_Campo"],
+    "ISO_45001": ["01_Identificacion_Peligros", "02_EPP", "03_Bloqueo_Etiquetado", "04_Emergencias", "05_Contratistas"],
+    "ISO_14001": ["01_Residuos", "02_Agua_Efluentes", "03_Emisiones", "04_Quimicos", "05_Biodiversidad"],
+    "ISO_37001": ["01_Controles_Financieros", "02_Debida_Diligencia", "03_Regalos_Hospitalidad"],
+    "EcoVadis": ["01_Ambiental", "02_Laboral_DDHH", "03_Etica", "04_Compras_Sostenibles"],
+    "GNP": [],
+    "Proveeduria_Sostenible": ["01_Productores_Cana", "02_Proveedores_Criticos"],
+    "Economia_Circular": ["01_Biochar", "02_Bagazo_Energia", "03_Cachaza_Vinaza"],
+    "Inspeccion_Campo": ["01_Zafra", "02_Cosecha", "03_Comunidad"]
+  },
+
+  "extensiones_foto": [".jpg", ".jpeg", ".heic", ".png", ".dng"],
+  "extensiones_video": [".mp4", ".mov", ".m4v"]
+}
